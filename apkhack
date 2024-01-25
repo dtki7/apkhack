@@ -9,9 +9,7 @@ if [ ! -e build/apk/ ]; then
     fi
 
     mkdir -p build/
-    # TODO fix the need for sudo and chown
-    sudo $(which apktool) d $1 -o build/apk
-    sudo chown -R user:user build/apk
+    apktool d $1 -o build/apk
 fi
 
 # configure the source files
@@ -34,8 +32,7 @@ for filename in build/src/*; do
 done
 
 # build the apk
-# TODO fix the need for sudo and chown
-sudo $(which apktool) b -o build/out.apk build/apk
+apktool b -o build/out.apk build/apk
 zipalign -p -f 4 build/out.apk build/out-align.apk
 mv -f build/out-align.apk build/out.apk
 [ -e build/apkhack.keystore ] || keytool -genkey -v \
