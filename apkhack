@@ -1,15 +1,24 @@
 #!/bin/bash
 set -e
 
+# parse args
+opt=$(getopt "s" "$@")
+serve=$(echo "$opt" | awk -F' --' '{print $1}' /dev/stdin)
+apkpath=$(echo "$opt" | awk -F'-- ' '{print $2}' /dev/stdin)
+
 # extract the apk
 if [ ! -e build/apk/ ]; then
-    if [ ! -e "$1" ]; then
-        echo "Please specify the input APK"
+    if [ ! -e "$apkpath" ]; then
+        if [ "$apkpath" ]; then
+            echo "'$apkpath' was not found"
+        else
+            echo "Please specify the input APK"
+        fi
         exit
     fi
 
     mkdir -p build/
-    apktool d $1 -o build/apk
+    apktool d "$apkpath" -o build/apk
 fi
 
 # configure the source files
@@ -17,10 +26,10 @@ fi
 mkdir -p build/src/
 for filename in src/*; do
     newname=build/src/$(basename "$filename")
-    cp $filename $newname
+    cp "$filename" "$newname"
     for line in $config; do
-        key=$(echo $line | cut -d ';' -f 1)
-        value=$(echo $line | cut -d ';' -f 2)
+        key=$(echo "$line" | cut -d ';' -f 1)
+        value=$(echo "$line" | cut -d ';' -f 2)
         sed -i "s/$key/$(echo $value | sed 's/[\/&]/\\&/g')/g" "$newname"
     done
 done
@@ -28,7 +37,7 @@ done
 # copy the source files
 for filename in build/src/*; do
     target=$(find build/apk/ -not -path "build/apk/build/*" -not -path "build/apk/original/*" -name "$(basename $filename)")
-    [ "$(diff $filename $target)" = "" ] || cp "$filename" "$target"
+    [ "$(diff "$filename" "$target")" = "" ] || cp "$filename" "$target"
 done
 
 # build the apk
@@ -41,7 +50,15 @@ mv -f build/out-align.apk build/out.apk
 apksigner sign --ks build/apkhack.keystore --ks-pass pass:password build/out.apk
 
 # install the apk
+set +e
 if [ $(adb get-state 2> /dev/null) ]; then
-    adb uninstall $(aapt2 dump packagename $1)
+    if [ "$apkpath" ]; then
+        adb uninstall $(aapt2 dump packagename "$apkpath")
+    else
+        echo "Uninstallation via adb only possible when the input APK is given"
+    fi
     adb install build/out.apk
+fi
+if [ "$serve" ]; then
+    python -m http.server --directory build/
 fi

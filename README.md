@@ -14,9 +14,11 @@ First, a specified input APK is extracted with apktool. Then the supplied "hacke
 
 ## Usage
 
-```bash
-./apkhack input.apk
 ```
+./apkhack <input apk> [-s]
+```
+
+- `-s`: Serve the build directory via HTTP.
 
 The "hacked" files are supplied in a directory named `src` inside the project root directory. The files are replacing files with exact the same name in the extracted APK directory. This is for convenience, but may elict the problem of duplicates or adding files without replacing them. Since I don't need it for now, I'll leave it for now.
 
